@@ -112,7 +112,7 @@ fn despawn_effects_on_timer(
 ) {
     for (entity, mut timer) in effects_with_timer.iter_mut() {
         timer.0.tick(time.delta());
-        if timer.0.finished() {
+        if timer.0.is_finished() {
             // TODO: Despawn more gracefully by stopping emissions first
             commands.entity(entity).try_despawn();
         }

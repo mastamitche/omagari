@@ -1,11 +1,10 @@
-/// OMAGARI - A Bevy-Hanabi 3D particle effects editor for HEXROLL
-use bevy::{
-    core_pipeline::bloom::Bloom,
-    prelude::*,
-    render::{camera::Viewport, view::RenderLayers},
-    window::PrimaryWindow,
-};
-use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
+// OMAGARI - A Bevy-Hanabi 3D particle effects editor for HEXROLL
+use bevy::prelude::*;
+
+use bevy::camera::visibility::RenderLayers;
+use bevy::post_process::bloom::Bloom;
+use bevy::render::view::Hdr;
+use bevy::{camera::Viewport, window::PrimaryWindow};
 
 use bevy_egui::{
     egui::{self, scroll_area::ScrollBarVisibility, Layout},
@@ -13,6 +12,8 @@ use bevy_egui::{
     PrimaryEguiContext,
 };
 use bevy_hanabi::prelude::*;
+use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
+
 use ron::ser::PrettyConfig;
 use std::fs::File;
 use std::io::Write;
@@ -50,10 +51,8 @@ fn setup(
     commands.spawn((
         Transform::from_xyz(0.0, 1.5, 5.0),
         Bloom::NATURAL,
-        Camera {
-            hdr: true,
-            ..default()
-        },
+        Hdr,
+        Camera { ..default() },
         PanOrbitCamera::default(),
     ));
 
@@ -61,8 +60,8 @@ fn setup(
         PrimaryEguiContext,
         Camera2d,
         RenderLayers::none(),
+        Hdr,
         Camera {
-            hdr: true,
             order: 1,
             ..default()
         },

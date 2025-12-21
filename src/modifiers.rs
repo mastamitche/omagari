@@ -679,8 +679,8 @@ struct GradientVec3Editor {
 }
 
 impl GradientVec3Editor {
-    pub fn produce(&self) -> Gradient<Vec3> {
-        let mut gradient = Gradient::<Vec3>::new();
+    pub fn produce(&self) -> bevy_hanabi::Gradient<Vec3> {
+        let mut gradient = bevy_hanabi::Gradient::<Vec3>::new();
         for (t, v) in self.g.iter() {
             gradient.add_key(*t, *v);
         }
@@ -722,8 +722,8 @@ struct GradientVec4Editor {
 }
 
 impl GradientVec4Editor {
-    pub fn produce(&self) -> Gradient<Vec4> {
-        let mut gradient = Gradient::<Vec4>::new();
+    pub fn produce(&self) -> bevy_hanabi::Gradient<Vec4> {
+        let mut gradient = bevy_hanabi::Gradient::<Vec4>::new();
         for (t, v) in self.g.iter() {
             gradient.add_key(*t, *v);
         }
