@@ -107,11 +107,7 @@ pub fn ui_for_vec4(ui: &mut egui::Ui, mut v: Vec4) -> Vec4 {
 }
 
 pub fn ui_for_list_item(ui: &mut egui::Ui, index: usize, len: usize) -> Option<ListCommand> {
-    if ui
-        .button("❌")
-        .on_hover_text("Right-click to delete")
-        .secondary_clicked()
-    {
+    if ui.button("❌").clicked() {
         return Some(ListCommand::Remove(index));
     }
 

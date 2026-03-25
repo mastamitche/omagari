@@ -32,6 +32,7 @@ pub fn spawn_particle_effects(
     res: &mut EffectResource,
     clone: Rc<RefCell<&mut OmagariProject>>,
     mut effects: ResMut<Assets<EffectAsset>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     curr: Query<Entity, With<ParticleEffect>>,
 ) {
     for h in res.effect_handles.iter() {
@@ -42,15 +43,19 @@ pub fn spawn_particle_effects(
     }
     let mut refs: HashMap<String, Entity> = HashMap::new();
     for effect in clone.borrow().effects.iter() {
-        let h = effects.add(effect.produce());
+        let h = effects.add(effect.produce(&mut meshes));
         res.effect_handles.push(h.clone());
         let mut e = commands.spawn((
             ParticleEffect::new(h.clone()),
-            EffectMaterial {
-                images: vec![res.textures[effect.texture_index().unwrap_or(0)].clone()],
-            },
             Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
         ));
+
+        if effect.mesh_shape() == ParticleMeshShape::Billboard {
+            e.insert(EffectMaterial {
+                images: vec![res.textures[effect.texture_index().unwrap_or(0)].clone()],
+            });
+        }
+
         refs.insert(effect.name().to_string(), e.id());
 
         if let Some(parent) = &effect.parent() {
@@ -72,7 +77,11 @@ pub fn despawn_all_particle_effects(
     }
 }
 
-pub fn export_effects_to_files(filename: &str, clone: Rc<RefCell<&mut OmagariProject>>) {
+pub fn export_effects_to_files(
+    filename: &str,
+    clone: Rc<RefCell<&mut OmagariProject>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
     let base = filename.split('.').next().unwrap();
     let other_filename = format!("{}.hanabi.ron", base);
     let mut to_export = ExportedProject::default();
@@ -81,7 +90,7 @@ pub fn export_effects_to_files(filename: &str, clone: Rc<RefCell<&mut OmagariPro
             name: effect.name().to_string(),
             parent: effect.parent().clone(),
             texture_index: effect.texture_index(),
-            effect_asset: effect.produce(),
+            effect_asset: effect.produce(&mut meshes),
         });
     }
     let ron_string =

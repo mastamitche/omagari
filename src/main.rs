@@ -92,6 +92,7 @@ fn app_ui(
     project: ResMut<OmagariProject>,
     mut res: ResMut<EffectResource>,
     effects: ResMut<Assets<EffectAsset>>,
+    meshes: ResMut<Assets<Mesh>>,
     curr: Query<Entity, With<ParticleEffect>>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
@@ -111,31 +112,30 @@ fn app_ui(
         .unwrap_or(&"".to_string())
         .clone();
 
-    egui::TopBottomPanel::top("Toolbar")
+    #[derive(Default)]
+    struct ToolbarAction {
+        render: bool,
+        stop: bool,
+        export: bool,
+    }
+
+    let toolbar_action = egui::TopBottomPanel::top("Toolbar")
         .resizable(false)
         .show(ctx, |ui| {
+            let mut action = ToolbarAction::default();
             ui.vertical(|ui| {
                 ui.add_space(2.0);
                 ui.horizontal(|ui| {
                     if ui.button("⏵ RENDER").clicked() {
-                        spawn_particle_effects(
-                            &mut commands,
-                            &mut res,
-                            project.clone(),
-                            effects,
-                            curr,
-                        );
+                        action.render = true;
                     }
 
                     if ui.button("⏹ STOP").clicked() {
-                        despawn_all_particle_effects(
-                            &curr,
-                            &mut commands,
-                        );
+                        action.stop = true;
                     }
 
                     if ui.button("🖭 EXPORT").clicked() {
-                        export_effects_to_files(&filename, project.clone());
+                        action.export = true;
                     }
 
                     ui.add_space(10.0);
@@ -194,10 +194,24 @@ fn app_ui(
                 });
             });
             ui.allocate_rect(ui.available_rect_before_wrap(), egui::Sense::hover());
+            action
         })
-        .response
-        .rect
-        .height();
+        .inner;
+
+    if toolbar_action.render {
+        spawn_particle_effects(
+            &mut commands,
+            &mut res,
+            project.clone(),
+            effects,
+            meshes,
+            curr,
+        );
+    } else if toolbar_action.stop {
+        despawn_all_particle_effects(&curr, &mut commands);
+    } else if toolbar_action.export {
+        export_effects_to_files(&res.context.filename.as_deref().unwrap_or(""), project.clone(), meshes);
+    }
 
     let left = egui::SidePanel::left("EffectsPanel")
         .resizable(true)

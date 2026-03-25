@@ -373,6 +373,62 @@ impl Default for SetPositionSphereModifierEditor {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct SetPositionCone3dModifierEditor {
+    base_radius_expr: ExprWriterEditor,
+    top_radius_expr: ExprWriterEditor,
+    height_expr: ExprWriterEditor,
+    dimension: ShapeDimension,
+}
+
+impl SetPositionCone3dModifierEditor {
+    pub fn label() -> &'static str {
+        "🕂 SetPositionCone3dModifier"
+    }
+}
+
+impl ModifierProducer<SetPositionCone3dModifier> for SetPositionCone3dModifierEditor {
+    fn produce(&self, writer: &ExprWriter) -> SetPositionCone3dModifier {
+        SetPositionCone3dModifier {
+            base_radius: self.base_radius_expr.produce(writer).expr(),
+            top_radius: self.top_radius_expr.produce(writer).expr(),
+            height: self.height_expr.produce(writer).expr(),
+            dimension: self.dimension,
+        }
+    }
+}
+
+impl UiProvider for SetPositionCone3dModifierEditor {
+    fn draw_ui(&mut self, app: &mut AppContext, ui: &mut egui::Ui, index: u64) {
+        unique_collapsing(index, Self::label(), ui).show(ui, |ui| {
+            unique_collapsing(1, "Base Radius", ui).show(ui, |ui| {
+                self.base_radius_expr.draw_ui(app, ui, 1);
+            });
+            unique_collapsing(2, "Top Radius", ui).show(ui, |ui| {
+                self.top_radius_expr.draw_ui(app, ui, 2);
+            });
+            unique_collapsing(3, "Height", ui).show(ui, |ui| {
+                self.height_expr.draw_ui(app, ui, 3);
+            });
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut self.dimension, ShapeDimension::Surface, "Surface");
+                ui.radio_value(&mut self.dimension, ShapeDimension::Volume, "Volume");
+            });
+        });
+    }
+}
+
+impl Default for SetPositionCone3dModifierEditor {
+    fn default() -> Self {
+        Self {
+            base_radius_expr: ExprWriterEditor::Float(0.5),
+            top_radius_expr: ExprWriterEditor::Float(0.0),
+            height_expr: ExprWriterEditor::Float(1.0),
+            dimension: ShapeDimension::Volume,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct AccelModifierEditor {
     accel_expr: ExprWriterEditor,
 }

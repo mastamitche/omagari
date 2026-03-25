@@ -11,6 +11,175 @@ use crate::modifiers::RenderModifierProducer;
 use crate::modifiers::*;
 use crate::AppContext;
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ParticleMeshShape {
+    Billboard,
+    Cube,
+    Sphere,
+    Capsule,
+    Torus,
+    Cylinder,
+    Cone,
+    Plane,
+}
+
+impl Default for ParticleMeshShape {
+    fn default() -> Self {
+        Self::Billboard
+    }
+}
+
+impl ParticleMeshShape {
+    pub fn create_mesh(&self, meshes: &mut Assets<Mesh>) -> Option<Handle<Mesh>> {
+        match self {
+            Self::Billboard => None,
+            Self::Cube => Some(meshes.add(Cuboid::from_size(Vec3::splat(0.125)))),
+            Self::Sphere => Some(meshes.add(Sphere::new(0.0625))),
+            Self::Capsule => Some(meshes.add(Capsule3d::new(0.04, 0.1))),
+            Self::Torus => Some(meshes.add(Torus::new(0.03, 0.06))),
+            Self::Cylinder => Some(meshes.add(Cylinder::new(0.05, 0.1))),
+            Self::Cone => Some(meshes.add(Cone::new(0.05, 0.1))),
+            Self::Plane => Some(meshes.add(Plane3d::new(Vec3::Y, Vec2::splat(0.1)))),
+        }
+    }
+
+    const ALL: [Self; 8] = [
+        Self::Billboard,
+        Self::Cube,
+        Self::Sphere,
+        Self::Capsule,
+        Self::Torus,
+        Self::Cylinder,
+        Self::Cone,
+        Self::Plane,
+    ];
+
+    fn label(&self) -> &'static str {
+        match self {
+            Self::Billboard => "Billboard",
+            Self::Cube => "Cube",
+            Self::Sphere => "Sphere",
+            Self::Capsule => "Capsule",
+            Self::Torus => "Torus",
+            Self::Cylinder => "Cylinder",
+            Self::Cone => "Cone",
+            Self::Plane => "Plane",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum OrientModeEditor {
+    ParallelCameraDepthPlane,
+    FaceCameraPosition,
+    AlongVelocity,
+}
+
+impl Default for OrientModeEditor {
+    fn default() -> Self {
+        Self::AlongVelocity
+    }
+}
+
+impl OrientModeEditor {
+    fn to_orient_mode(&self) -> OrientMode {
+        match self {
+            Self::ParallelCameraDepthPlane => OrientMode::ParallelCameraDepthPlane,
+            Self::FaceCameraPosition => OrientMode::FaceCameraPosition,
+            Self::AlongVelocity => OrientMode::AlongVelocity,
+        }
+    }
+
+    fn label(&self) -> &'static str {
+        match self {
+            Self::ParallelCameraDepthPlane => "ParallelCamera",
+            Self::FaceCameraPosition => "FaceCamera",
+            Self::AlongVelocity => "AlongVelocity",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum AlphaModeEditor {
+    Blend,
+    Premultiply,
+    Add,
+    Multiply,
+    Opaque,
+}
+
+impl Default for AlphaModeEditor {
+    fn default() -> Self {
+        Self::Blend
+    }
+}
+
+impl AlphaModeEditor {
+    fn to_alpha_mode(&self) -> bevy_hanabi::AlphaMode {
+        match self {
+            Self::Blend => bevy_hanabi::AlphaMode::Blend,
+            Self::Premultiply => bevy_hanabi::AlphaMode::Premultiply,
+            Self::Add => bevy_hanabi::AlphaMode::Add,
+            Self::Multiply => bevy_hanabi::AlphaMode::Multiply,
+            Self::Opaque => bevy_hanabi::AlphaMode::Opaque,
+        }
+    }
+
+    fn label(&self) -> &'static str {
+        match self {
+            Self::Blend => "Blend",
+            Self::Premultiply => "Premultiply",
+            Self::Add => "Add",
+            Self::Multiply => "Multiply",
+            Self::Opaque => "Opaque",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SimulationSpaceEditor {
+    Global,
+    Local,
+}
+
+impl Default for SimulationSpaceEditor {
+    fn default() -> Self {
+        Self::Global
+    }
+}
+
+impl SimulationSpaceEditor {
+    fn to_simulation_space(&self) -> SimulationSpace {
+        match self {
+            Self::Global => SimulationSpace::Global,
+            Self::Local => SimulationSpace::Local,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MotionIntegrationEditor {
+    None,
+    PreUpdate,
+    PostUpdate,
+}
+
+impl Default for MotionIntegrationEditor {
+    fn default() -> Self {
+        Self::PostUpdate
+    }
+}
+
+impl MotionIntegrationEditor {
+    fn to_motion_integration(&self) -> MotionIntegration {
+        match self {
+            Self::None => MotionIntegration::None,
+            Self::PreUpdate => MotionIntegration::PreUpdate,
+            Self::PostUpdate => MotionIntegration::PostUpdate,
+        }
+    }
+}
+
 fn ui_for_modifiers_list<T, R>(
     app: &mut AppContext,
     ui: &mut egui::Ui,
@@ -58,6 +227,7 @@ pub enum ModifierEditor {
     InheritAttribute(InheritAttributeModifierEditor),
     SetPositionCircle(SetPositionCircleModifierEditor),
     SetPositionSphere(SetPositionSphereModifierEditor),
+    SetPositionCone3d(SetPositionCone3dModifierEditor),
     SetVelocityCircle(SetVelocityCircleModifierEditor),
     SetVelocitySphere(SetVelocitySphereModifierEditor),
     SetVelocityTangent(SetVelocityTangentModifierEditor),
@@ -75,6 +245,9 @@ impl ModifierEditor {
             }
             ModifierEditor::SetPositionSphere(n) => {
                 ProducedModifier::SetPositionSphere(n.produce(writer))
+            }
+            ModifierEditor::SetPositionCone3d(n) => {
+                ProducedModifier::SetPositionCone3d(n.produce(writer))
             }
             ModifierEditor::SetVelocityCircle(n) => {
                 ProducedModifier::SetVelocityCircle(n.produce(writer))
@@ -108,6 +281,7 @@ impl UiProvider for ModifierEditor {
         match self {
             ModifierEditor::SetPositionCircle(n) => n.draw_ui(app, ui, index),
             ModifierEditor::SetPositionSphere(n) => n.draw_ui(app, ui, index),
+            ModifierEditor::SetPositionCone3d(n) => n.draw_ui(app, ui, index),
             ModifierEditor::SetVelocityCircle(n) => n.draw_ui(app, ui, index),
             ModifierEditor::SetVelocitySphere(n) => n.draw_ui(app, ui, index),
             ModifierEditor::SetVelocityTangent(n) => n.draw_ui(app, ui, index),
@@ -141,6 +315,7 @@ enum ProducedModifier {
     SetVelocityTangent(SetVelocityTangentModifier),
     SetPositionSphere(SetPositionSphereModifier),
     SetPositionCircle(SetPositionCircleModifier),
+    SetPositionCone3d(SetPositionCone3dModifier),
     SetAttribute(SetAttributeModifier),
     InheritAttribute(InheritAttributeModifier),
     SetVelocityCircle(SetVelocityCircleModifier),
@@ -158,6 +333,16 @@ pub struct EffectEditor {
     capacity: u32,
     spawner_settings: SpawnerSettings,
     texture_index: Option<usize>,
+    #[serde(default)]
+    mesh_shape: ParticleMeshShape,
+    #[serde(default)]
+    orient_mode: OrientModeEditor,
+    #[serde(default)]
+    alpha_mode: AlphaModeEditor,
+    #[serde(default)]
+    simulation_space: SimulationSpaceEditor,
+    #[serde(default)]
+    motion_integration: MotionIntegrationEditor,
     init_modifiers: Vec<ModifierEditor>,
     update_modifiers: Vec<ModifierEditor>,
     render_modifiers: Vec<RenderModifierEditor>,
@@ -208,6 +393,46 @@ impl UiProvider for EffectEditor {
                                 }
                             }
                         })
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label("Mesh:");
+                        egui::ComboBox::from_id_salt(id.with("mesh_shape"))
+                            .selected_text(self.mesh_shape.label())
+                            .show_ui(ui, |ui| {
+                                for shape in ParticleMeshShape::ALL.iter() {
+                                    ui.selectable_value(&mut self.mesh_shape, *shape, shape.label());
+                                }
+                            });
+                        ui.label("Orient:");
+                        egui::ComboBox::from_id_salt(id.with("orient_mode"))
+                            .selected_text(self.orient_mode.label())
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut self.orient_mode, OrientModeEditor::AlongVelocity, "AlongVelocity");
+                                ui.selectable_value(&mut self.orient_mode, OrientModeEditor::FaceCameraPosition, "FaceCamera");
+                                ui.selectable_value(&mut self.orient_mode, OrientModeEditor::ParallelCameraDepthPlane, "ParallelCamera");
+                            });
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Alpha:");
+                        egui::ComboBox::from_id_salt(id.with("alpha_mode"))
+                            .selected_text(self.alpha_mode.label())
+                            .show_ui(ui, |ui| {
+                                ui.selectable_value(&mut self.alpha_mode, AlphaModeEditor::Blend, "Blend");
+                                ui.selectable_value(&mut self.alpha_mode, AlphaModeEditor::Premultiply, "Premultiply");
+                                ui.selectable_value(&mut self.alpha_mode, AlphaModeEditor::Add, "Add");
+                                ui.selectable_value(&mut self.alpha_mode, AlphaModeEditor::Multiply, "Multiply");
+                                ui.selectable_value(&mut self.alpha_mode, AlphaModeEditor::Opaque, "Opaque");
+                            });
+                        ui.label("Space:");
+                        ui.radio_value(&mut self.simulation_space, SimulationSpaceEditor::Global, "Global");
+                        ui.radio_value(&mut self.simulation_space, SimulationSpaceEditor::Local, "Local");
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Motion:");
+                        ui.radio_value(&mut self.motion_integration, MotionIntegrationEditor::PostUpdate, "PostUpdate");
+                        ui.radio_value(&mut self.motion_integration, MotionIntegrationEditor::PreUpdate, "PreUpdate");
+                        ui.radio_value(&mut self.motion_integration, MotionIntegrationEditor::None, "None");
                     });
 
                     unique_collapsing(1, "Spawner", ui).show(ui, |ui| {
@@ -267,6 +492,14 @@ impl UiProvider for EffectEditor {
                             {
                                 list.push(ModifierEditor::SetPositionSphere(
                                     SetPositionSphereModifierEditor::default(),
+                                ));
+                            }
+                            if ui
+                                .button(SetPositionCone3dModifierEditor::label())
+                                .clicked()
+                            {
+                                list.push(ModifierEditor::SetPositionCone3d(
+                                    SetPositionCone3dModifierEditor::default(),
                                 ));
                             }
                             if ui
@@ -366,7 +599,11 @@ impl EffectEditor {
     pub fn texture_index(&self) -> Option<usize> {
         self.texture_index
     }
-    pub fn produce(&self) -> EffectAsset {
+    pub fn mesh_shape(&self) -> ParticleMeshShape {
+        self.mesh_shape
+    }
+
+    pub fn produce(&self, meshes: &mut Assets<Mesh>) -> EffectAsset {
         let writer = ExprWriter::new();
 
         let mut init_modifiers: Vec<ProducedModifier> = Vec::new();
@@ -378,14 +615,65 @@ impl EffectEditor {
             update_modifiers.push(m.produce(&writer));
         }
 
-        let texture_slot = writer.lit(0u32).expr();
+        let use_mesh = self.mesh_shape != ParticleMeshShape::Billboard;
+
+        let texture_slot = if !use_mesh {
+            Some(writer.lit(0u32).expr())
+        } else {
+            None
+        };
+
+        let mesh_init_size = if use_mesh {
+            Some(SetAttributeModifier::new(
+                Attribute::SIZE,
+                writer.lit(1.0f32).expr(),
+            ))
+        } else {
+            None
+        };
+
+        let mesh_init_lifetime = if use_mesh {
+            Some(SetAttributeModifier::new(
+                Attribute::LIFETIME,
+                writer.lit(5.0f32).expr(),
+            ))
+        } else {
+            None
+        };
+
+        let mesh_init_age = if use_mesh {
+            Some(SetAttributeModifier::new(
+                Attribute::AGE,
+                writer.lit(0.0f32).expr(),
+            ))
+        } else {
+            None
+        };
 
         let mut module = writer.finish();
-        module.add_texture_slot("color");
+        if !use_mesh {
+            module.add_texture_slot("color");
+        }
 
         let mut e = EffectAsset::new(self.capacity, self.spawner_settings, module)
-            .with_alpha_mode(bevy_hanabi::AlphaMode::Blend)
+            .with_alpha_mode(self.alpha_mode.to_alpha_mode())
+            .with_simulation_space(self.simulation_space.to_simulation_space())
+            .with_motion_integration(self.motion_integration.to_motion_integration())
             .with_name(&self.name);
+
+        if let Some(mesh_handle) = self.mesh_shape.create_mesh(meshes) {
+            e = e.mesh(mesh_handle);
+        }
+
+        if let Some(m) = mesh_init_size {
+            e = e.init(m);
+        }
+        if let Some(m) = mesh_init_lifetime {
+            e = e.init(m);
+        }
+        if let Some(m) = mesh_init_age {
+            e = e.init(m);
+        }
 
         for modifier_wrapper in init_modifiers {
             match modifier_wrapper {
@@ -396,6 +684,9 @@ impl EffectEditor {
                     e = e.init(modifier);
                 }
                 ProducedModifier::SetPositionSphere(modifier) => {
+                    e = e.init(modifier);
+                }
+                ProducedModifier::SetPositionCone3d(modifier) => {
                     e = e.init(modifier);
                 }
                 ProducedModifier::SetAttribute(modifier) => {
@@ -439,11 +730,15 @@ impl EffectEditor {
             }
         }
 
-        e.render(ParticleTextureModifier {
-            texture_slot,
-            sample_mapping: ImageSampleMapping::ModulateOpacityFromR,
-        })
-        .render(OrientModifier::new(OrientMode::AlongVelocity))
+        if let Some(slot) = texture_slot {
+            e = e.render(ParticleTextureModifier {
+                texture_slot: slot,
+                sample_mapping: ImageSampleMapping::ModulateOpacityFromR,
+            })
+            .render(OrientModifier::new(self.orient_mode.to_orient_mode()));
+        }
+
+        e
     }
 }
 
@@ -455,6 +750,11 @@ impl Default for EffectEditor {
             capacity: 16384,
             spawner_settings: SpawnerSettings::rate(500.0.into()),
             texture_index: Some(0),
+            mesh_shape: ParticleMeshShape::default(),
+            orient_mode: OrientModeEditor::default(),
+            alpha_mode: AlphaModeEditor::default(),
+            simulation_space: SimulationSpaceEditor::default(),
+            motion_integration: MotionIntegrationEditor::default(),
             init_modifiers: Vec::new(),
             update_modifiers: Vec::new(),
             render_modifiers: Vec::new(),
