@@ -50,6 +50,20 @@ pub const ALL_ATTRS: [(Attribute, &str); 39] = [
     (Attribute::RIBBON_ID, "Ribbon ID"),
 ];
 
+pub fn default_expr_for_attribute(attr: Attribute) -> ExprWriterEditor {
+    if attr == Attribute::COLOR {
+        return ExprWriterEditor::Color([1.0, 1.0, 1.0, 1.0]);
+    }
+    match attr.value_type() {
+        ValueType::Scalar(ScalarType::Float) => ExprWriterEditor::Float(0.0),
+        ValueType::Scalar(ScalarType::Uint) => ExprWriterEditor::U32(0),
+        ValueType::Vector(v) if v.count() == 2 => ExprWriterEditor::Vec3(Vec3::ZERO),
+        ValueType::Vector(v) if v.count() == 3 => ExprWriterEditor::Vec3(Vec3::ZERO),
+        ValueType::Vector(v) if v.count() == 4 => ExprWriterEditor::Vec4(Vec4::ZERO),
+        _ => ExprWriterEditor::Float(0.0),
+    }
+}
+
 pub fn attr_to_label(attr: Attribute) -> &'static str {
     if let Some(result) = ALL_ATTRS
         .iter()
@@ -309,6 +323,7 @@ pub enum ExprWriterEditor {
     U32(u32),
     Vec3(Vec3),
     Vec4(Vec4),
+    Color([f32; 4]),
     Time,
     Age,
 }
@@ -324,6 +339,9 @@ impl ExprWriterEditor {
             ExprWriterEditor::U32(f) => writer.lit(*f),
             ExprWriterEditor::Vec3(v) => writer.lit(*v),
             ExprWriterEditor::Vec4(v) => writer.lit(*v),
+            ExprWriterEditor::Color(c) => {
+                writer.lit(Vec4::new(c[0], c[1], c[2], c[3])).pack4x8unorm()
+            }
             ExprWriterEditor::Time => writer.time(),
             ExprWriterEditor::Placeholder => writer.lit(0.0),
             ExprWriterEditor::Age => writer.attr(Attribute::AGE),
@@ -460,6 +478,31 @@ impl ExprWriterEditor {
                     })
                     .inner;
             }
+            ExprWriterEditor::Color(rgba) => {
+                let mut color = *rgba;
+                let result = ui
+                    .horizontal(|ui| {
+                        match ui_tools_for_expr_writer("Color", ui) {
+                            ExprControl::Delete => {
+                                return Some(ExprWriterEditor::Placeholder);
+                            }
+                            ExprControl::Noop => {
+                                ui.color_edit_button_rgba_unmultiplied(&mut color);
+                            }
+                            ExprControl::Copy => {
+                                app.expr_clipboard = Some(c);
+                                ui.color_edit_button_rgba_unmultiplied(&mut color);
+                            }
+                        }
+                        None
+                    })
+                    .inner;
+                if let Some(new_val) = result {
+                    *self = new_val;
+                } else {
+                    *self = ExprWriterEditor::Color(color);
+                }
+            }
             ExprWriterEditor::Time => {
                 *self = ui
                     .horizontal(|ui| match ui_tools_for_expr_writer("Time", ui) {
@@ -506,6 +549,9 @@ impl ExprWriterEditor {
                     }
                     if ui.button("Vec4").clicked() {
                         *self = ExprWriterEditor::Vec4(Vec4::ZERO);
+                    }
+                    if ui.button("Color").clicked() {
+                        *self = ExprWriterEditor::Color([1.0, 1.0, 1.0, 1.0]);
                     }
                     ui.separator();
                     ui.menu_button("Prebuilt", |ui| {

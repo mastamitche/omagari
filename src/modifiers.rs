@@ -48,6 +48,7 @@ impl UiProvider for SetAttributeModifierEditor {
     fn draw_ui(&mut self, app: &mut AppContext, ui: &mut egui::Ui, index: u64) {
         let selected_text = attr_to_label(self.attr);
         let id = ui.make_persistent_id(format!("{} {}", selected_text, index));
+        let prev_attr = self.attr;
         ui.vertical(|ui| {
             egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
                 .show_header(ui, |ui| {
@@ -63,6 +64,9 @@ impl UiProvider for SetAttributeModifierEditor {
                     self.attr_expr.draw_ui(app, ui, 1);
                 });
         });
+        if self.attr != prev_attr {
+            self.attr_expr = default_expr_for_attribute(self.attr);
+        }
     }
 }
 
