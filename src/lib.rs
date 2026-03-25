@@ -148,7 +148,7 @@ struct PreparedEffect {
 struct EffectDespawnTimer(Timer);
 
 /// Asset loader for Omagari effects.
-#[derive(Default)]
+#[derive(Default, TypePath)]
 struct OmagariAssetLoader;
 
 impl AssetLoader for OmagariAssetLoader {
